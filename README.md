@@ -2,6 +2,8 @@
 
 WS4000 simulator in Docker/Wine. Streams to Kick via ffmpeg sidecar.
 
+![WS4000 ingress landing page](docs/images/webui.png)
+
 ## Setup
 
 ```bash
