@@ -107,7 +107,7 @@ spec:
         args:
           - |
             set -euo pipefail
-            src="/app/WS4000v4/profile.dat"
+            src="/config-src/profile.dat"
             dest="/config-export/profile.dat"
             if [ ! -f "$src" ]; then
               echo "WARNING: $src missing; profile export may be empty until ws4000 starts"
@@ -121,8 +121,8 @@ spec:
           mountPath: /config-export
         {{- if .Values.config.enabled }}
         - name: ws4000-config
-          mountPath: /app/WS4000v4/profile.dat
-          subPath: profile.dat
+          mountPath: /config-src
+          readOnly: true
         {{- end }}
       {{- end }}
       containers:
