@@ -2,10 +2,12 @@
 
 WS4000 simulator in Docker/Wine. Streams to Kick via ffmpeg sidecar.
 
+This project runs **[Taiganet's WS4000v4 simulator](https://www.taiganet.com/)** — a faithful, feature-rich recreation of the classic Weather Star 4000. None of the magic is ours; it all comes from their software and the community around it. Many thanks to Taiganet for building and sharing it. Grab `Config.w4k` and join the discussion on the [Taiganet forum](https://www.taiganet.com/forum/index.php/topic,4135.0.html).
+
 <table>
 <tr>
-<td><img src="docs/images/webui.png" alt="WS4000 ingress landing page" width="320"></td>
-<td><img src="docs/images/simulator.png" alt="WS4000 simulator in noVNC" width="320"></td>
+<td><img src="docs/images/webui.png" alt="WS4000 ingress landing page" width="400"></td>
+<td><img src="docs/images/simulator.png" alt="WS4000 simulator in noVNC" width="400"></td>
 </tr>
 </table>
 
