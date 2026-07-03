@@ -1,0 +1,42 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "ws4000.fullname" . }}
+  labels:
+    {{- include "ws4000.labels" . | nindent 4 }}
+  annotations:
+    nginx.org/websocket-services: {{ include "ws4000.fullname" . }}-profile-export
+    {{- if and .Values.ingress.basicAuth.enabled .Values.ingress.basicAuth.password }}
+    nginx.org/basic-auth-secret: {{ include "ws4000.fullname" . }}-ingress-basicauth
+    nginx.org/basic-auth-realm: "WS4000"
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          {{- if .Values.profileExport.enabled }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "ws4000.fullname" . }}-profile-export
+                port:
+                  number: {{ .Values.profileExport.port }}
+          {{- else if .Values.novnc.enabled }}
+          - path: {{ .Values.ingress.paths.vnc }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "ws4000.fullname" . }}-novnc
+                port:
+                  number: {{ .Values.novnc.port }}
+          {{- end }}
+{{- end }}

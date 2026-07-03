@@ -1,0 +1,17 @@
+{{- if and .Values.config.enabled (eq .Values.config.type "pvc") (not .Values.config.pvc.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "ws4000.configPvcName" . }}
+  labels:
+    {{- include "ws4000.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    {{- toYaml .Values.config.pvc.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .Values.config.pvc.size | quote }}
+  {{- if .Values.config.pvc.storageClass }}
+  storageClassName: {{ .Values.config.pvc.storageClass | quote }}
+  {{- end }}
+{{- end }}

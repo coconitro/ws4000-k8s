@@ -1,0 +1,50 @@
+# Copy to my-values.yaml and edit. See docs/DEPLOYMENT.md
+
+image:
+  repository: ghcr.io/coconitro/ws4000
+  tag: latest
+
+kick:
+  streamKey: ""          # REQUIRED
+  rtmpUrl: ""            # REQUIRED
+
+hostPaths:
+  music: /path/on/host/ws4000-music
+
+# nfs:
+#   server: nfs.example.com
+#   export: /exports/shared
+#   subPath: apps/ws4000-music
+
+vlc:
+  enabled: true
+  playlist: /music/ws4000-all.xspf
+
+# External config (profile, Config.w4k, logo, background)
+# config:
+#   enabled: true
+#   type: nfs
+#   seedFromImage: false
+#   nfs:
+#     subPath: apps/ws4000-config
+# branding:
+#   streamLogo: ws4000-logo.png
+#   x11Background: ws4000-background.jpg
+# stream:
+#   logo: /config/ws4000-logo.png
+
+ingress:
+  enabled: true
+  className: nginx
+  host: ws4000.example.com
+  basicAuth:
+    enabled: true
+    username: admin
+    password: ""           # REQUIRED when basic auth on
+
+# GPU: see docs/GPU.md
+# gpu:
+#   enabled: true
+#   mode: vaapi
+#   ws4000Enabled: false
+#   supplementalGroups: [109]

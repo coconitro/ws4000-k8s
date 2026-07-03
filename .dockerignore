@@ -1,0 +1,11 @@
+.git
+.gitignore
+.DS_Store
+docs/
+deploy/
+build/
+assets/music/
+*.md
+dist/
+*.backup*
+profile.dat.reverted

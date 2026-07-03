@@ -1,0 +1,15 @@
+Third-Party Components
+========================
+
+This project bundles or depends on the following third-party software:
+
+- Taiganet WS4000 Simulator v4 — download from
+  https://www.taiganet.com/dlv4new.php?os_type=win&public=1&dl_type=archive
+  or https://archive.org/details/ws-4000-simulator-installer
+- FMOD (fmod64.dll) — included in the WS4000 simulator bundle
+- Wine-GE — https://github.com/GloriousEggroll/wine-ge-custom
+- DXVK — installed via winetricks
+- gotget/novnc — web VNC sidecar image
+
+The WS4000 simulator binaries are not redistributed in this git repository.
+Run `./build/download-ws4000.sh` before building the container image.

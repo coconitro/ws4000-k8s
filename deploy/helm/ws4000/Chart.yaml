@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ws4000
+description: WS4000 simulator with Kick RTMP streaming sidecar
+type: application
+version: 0.2.0
+appVersion: "4"

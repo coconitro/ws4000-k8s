@@ -1,0 +1,37 @@
+WS4000 deployed as {{ include "ws4000.fullname" . }}.
+
+Music mount:
+{{- if .Values.nfs.server }}
+  NFS: {{ .Values.nfs.server }}:{{ include "ws4000.nfsExport" . }}/{{ include "ws4000.musicNfsSubPath" . }}
+{{- else }}
+  hostPath: {{ .Values.hostPaths.music }}
+{{- end }}
+
+{{- if .Values.config.enabled }}
+Config volume: enabled ({{ .Values.config.type }})
+{{- else }}
+Config: baked into image or set config.enabled for external volume
+{{- end }}
+
+{{- if .Values.vlc.enabled }}
+VLC playlist: {{ .Values.vlc.playlist }}
+{{- else }}
+VLC: disabled (WS4000 handles audio)
+{{- end }}
+
+Example values: deploy/helm/ws4000/values.example.yaml
+GPU: docs/GPU.md
+
+{{- if .Values.ingress.enabled }}
+
+Web: http://{{ .Values.ingress.host }}/
+VNC: http://{{ .Values.ingress.host }}/vnc.html
+{{- if .Values.profileExport.enabled }}
+Profile: http://{{ .Values.ingress.host }}/export/profile.dat
+{{- end }}
+{{- end }}
+
+Install:
+  helm install ws4000 oci://ghcr.io/coconitro/ws4000 --version {{ .Chart.Version }} -f my-values.yaml
+
+See docs/DEPLOYMENT.md

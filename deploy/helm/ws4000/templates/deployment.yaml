@@ -1,0 +1,408 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ws4000.fullname" . }}
+  labels:
+    {{- include "ws4000.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "ws4000.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ws4000.selectorLabels" . | nindent 8 }}
+    spec:
+      shareProcessNamespace: true
+      {{- if and (or .Values.gpu.enabled .Values.gpu.ws4000Enabled) .Values.gpu.supplementalGroups }}
+      securityContext:
+        supplementalGroups:
+          {{- toYaml .Values.gpu.supplementalGroups | nindent 10 }}
+      {{- end }}
+      {{- if and (or .Values.gpu.enabled .Values.gpu.ws4000Enabled) .Values.gpu.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.gpu.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if and (or .Values.gpu.enabled .Values.gpu.ws4000Enabled) .Values.gpu.tolerations }}
+      tolerations:
+        {{- toYaml .Values.gpu.tolerations | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+      - name: fix-pulse-runtime
+        image: busybox:1.36
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            mkdir -p /tmp/pulse/run
+            chown 1000:1000 /tmp/pulse/run
+            chmod 700 /tmp/pulse/run
+        volumeMounts:
+        - name: pulse-socket
+          mountPath: /tmp/pulse
+      {{- if .Values.nfs.server }}
+      - name: ensure-music-dir
+        image: busybox:1.36
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            set -eu
+            music="{{ include "ws4000.musicNfsSubPath" . }}"
+            mkdir -p "/mnt/${music}"
+            ls -la "/mnt/${music}"
+        volumeMounts:
+        - name: music-volume
+          mountPath: /mnt
+      {{- end }}
+      {{- if and .Values.config.enabled (eq .Values.config.type "nfs") (include "ws4000.configNfsServer" .) }}
+      - name: ensure-config-dir
+        image: busybox:1.36
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            set -eu
+            cfg="{{ include "ws4000.configNfsSubPath" . }}"
+            mkdir -p "/mnt/${cfg}"
+            ls -la "/mnt/${cfg}"
+        volumeMounts:
+        - name: ws4000-config
+          mountPath: /mnt
+      {{- end }}
+      {{- if and .Values.config.enabled .Values.config.seedFromImage }}
+      - name: seed-ws4000-config
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            set -euo pipefail
+            mount="/config-mount"
+            for pair in "profile.dat:profile.dat" "Config.w4k:Config.w4k"; do
+              file="${pair%%:*}"
+              if [ ! -f "${mount}/${file}" ] && [ -f "/app/WS4000v4/${file}" ]; then
+                cp -f "/app/WS4000v4/${file}" "${mount}/${file}"
+                echo "seeded ${file}"
+              fi
+            done
+            ls -la "${mount}" || true
+        volumeMounts:
+        - name: ws4000-config
+          mountPath: /config-mount
+      {{- end }}
+      {{- if .Values.profileExport.enabled }}
+      - name: seed-profile-export
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            set -euo pipefail
+            src="/app/WS4000v4/profile.dat"
+            dest="/config-export/profile.dat"
+            if [ ! -f "$src" ]; then
+              echo "WARNING: $src missing; profile export may be empty until ws4000 starts"
+              exit 0
+            fi
+            mkdir -p /config-export
+            cp -f "$src" "$dest"
+            ls -la "$dest"
+        volumeMounts:
+        - name: config-export
+          mountPath: /config-export
+        {{- if .Values.config.enabled }}
+        - name: ws4000-config
+          mountPath: /app/WS4000v4/profile.dat
+          subPath: profile.dat
+        {{- end }}
+      {{- end }}
+      containers:
+      - name: ws4000
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        workingDir: /app/WS4000v4
+        {{- if and .Values.gpu.ws4000Enabled .Values.gpu.privileged }}
+        securityContext:
+          privileged: true
+        {{- end }}
+        env:
+        - name: RESOLUTION
+          value: {{ .Values.stream.resolution | quote }}
+        - name: MUSIC_DIR
+          value: "/music"
+        - name: VLC_ENABLED
+          value: {{ .Values.vlc.enabled | ternary "1" "0" | quote }}
+        {{- if .Values.vlc.enabled }}
+        - name: PLAYLIST
+          value: {{ .Values.vlc.playlist | quote }}
+        - name: VLC_NORM_MAX_LEVEL
+          value: {{ .Values.vlc.normMaxLevel | quote }}
+        {{- end }}
+        {{- if and .Values.config.enabled .Values.branding.x11Background }}
+        - name: X11_BACKGROUND
+          value: "/config/{{ .Values.branding.x11Background }}"
+        {{- end }}
+        {{- if .Values.profileExport.enabled }}
+        - name: PROFILE_SYNC_INTERVAL
+          value: {{ .Values.profileExport.syncIntervalSeconds | quote }}
+        {{- end }}
+        {{- if .Values.vnc.password }}
+        - name: VNC_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "ws4000.fullname" . }}-vnc
+              key: password
+        {{- end }}
+        {{- if .Values.gpu.ws4000Enabled }}
+        - name: WS4000_USE_GPU
+          value: "1"
+        - name: WS4000_GPU_DEVICE
+          value: {{ .Values.gpu.device | quote }}
+        - name: LIBVA_DRIVER_NAME
+          value: {{ .Values.gpu.libvaDriverName | quote }}
+        - name: VK_ICD_FILENAMES
+          value: "/usr/share/vulkan/icd.d/radeon_icd.x86_64.json"
+        - name: WS4000_USE_ZINK
+          value: "0"
+        - name: WS4000_USE_XORG
+          value: "1"
+        {{- end }}
+        ports:
+        - containerPort: 5900
+        volumeMounts:
+        - name: music-volume
+          mountPath: /music
+          {{- if and .Values.nfs.server (or .Values.nfs.subPath .Values.nfs.path.music) }}
+          subPath: {{ include "ws4000.musicNfsSubPath" . | quote }}
+          {{- end }}
+        {{- if .Values.config.enabled }}
+        - name: ws4000-config
+          mountPath: /app/WS4000v4/profile.dat
+          subPath: profile.dat
+        - name: ws4000-config
+          mountPath: /app/WS4000v4/Config.w4k
+          subPath: Config.w4k
+        {{- if .Values.branding.x11Background }}
+        - name: ws4000-config
+          mountPath: /config/{{ .Values.branding.x11Background }}
+          subPath: {{ .Values.branding.x11Background | quote }}
+        {{- end }}
+        {{- end }}
+        - name: x11-socket
+          mountPath: /tmp/.X11-unix
+        - name: pulse-socket
+          mountPath: /tmp/pulse
+        - name: dshm
+          mountPath: /dev/shm
+        {{- if and .Values.gpu.ws4000Enabled .Values.gpu.mountHostDri }}
+        - name: dri
+          mountPath: /dev/dri
+        {{- end }}
+        {{- if .Values.profileExport.enabled }}
+        - name: config-export
+          mountPath: /config-export
+        {{- end }}
+        {{- with .Values.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- else }}
+        resources:
+          requests:
+            cpu: "1"
+            memory: "1Gi"
+          limits:
+            cpu: "4"
+            memory: "3Gi"
+        {{- end }}
+        {{- if .Values.livenessProbe.enabled }}
+        livenessProbe:
+          exec:
+            command:
+              - /usr/local/bin/healthcheck.sh
+          initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+        {{- end }}
+
+      - name: streamer
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        command: ["/usr/local/bin/stream.sh"]
+        {{- if and .Values.gpu.enabled .Values.gpu.privileged }}
+        securityContext:
+          privileged: true
+          runAsUser: 1000
+          runAsGroup: 1000
+        {{- end }}
+        volumeMounts:
+        - name: x11-socket
+          mountPath: /tmp/.X11-unix
+        - name: pulse-socket
+          mountPath: /tmp/pulse
+        - name: dshm
+          mountPath: /dev/shm
+        {{- if and .Values.gpu.enabled .Values.gpu.mountHostDri }}
+        - name: dri
+          mountPath: /dev/dri
+        {{- end }}
+        {{- if and .Values.config.enabled .Values.branding.streamLogo }}
+        - name: ws4000-config
+          mountPath: /config/{{ .Values.branding.streamLogo }}
+          subPath: {{ .Values.branding.streamLogo | quote }}
+        {{- end }}
+        env:
+        - name: RESOLUTION
+          value: {{ .Values.stream.resolution | quote }}
+        - name: XDG_RUNTIME_DIR
+          value: "/tmp/pulse/run"
+        - name: STREAM_LOGO
+          value: {{ include "ws4000.streamLogoPath" . | quote }}
+        - name: STREAM_LOGO_HEIGHT
+          value: {{ .Values.stream.logoHeight | quote }}
+        - name: STREAM_LOGO_MARGIN
+          value: {{ .Values.stream.logoMargin | quote }}
+        - name: STREAM_LOGO_ALPHA
+          value: {{ .Values.stream.logoAlpha | quote }}
+        - name: STREAM_FPS
+          value: {{ .Values.stream.fps | quote }}
+        - name: STREAM_VIDEO_BITRATE
+          value: {{ .Values.stream.videoBitrate | quote }}
+        - name: STREAM_VIDEO_MAXRATE
+          value: {{ .Values.stream.videoMaxRate | quote }}
+        - name: STREAM_VIDEO_BUFSIZE
+          value: {{ .Values.stream.videoBufSize | quote }}
+        - name: STREAM_AUDIO_BITRATE
+          value: {{ .Values.stream.audioBitrate | quote }}
+        - name: STREAM_X264_PRESET
+          value: {{ .Values.stream.x264Preset | quote }}
+        - name: STREAM_OUTPUT_WIDTH
+          value: {{ .Values.stream.outputWidth | quote }}
+        - name: STREAM_OUTPUT_HEIGHT
+          value: {{ .Values.stream.outputHeight | quote }}
+        {{- if .Values.gpu.enabled }}
+        - name: STREAM_USE_GPU
+          value: "1"
+        - name: STREAM_GPU_MODE
+          value: {{ .Values.gpu.mode | quote }}
+        - name: STREAM_VAAPI_DEVICE
+          value: {{ .Values.gpu.device | quote }}
+        - name: LIBVA_DRIVER_NAME
+          value: {{ .Values.gpu.libvaDriverName | quote }}
+        {{- end }}
+        - name: KICK_STREAM_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "ws4000.fullname" . }}-kick
+              key: stream-key
+        - name: KICK_RTMP_URL
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "ws4000.fullname" . }}-kick
+              key: rtmp-url
+        resources:
+          requests:
+            cpu: {{ if .Values.gpu.enabled }}"400m"{{ else }}"800m"{{ end }}
+            memory: "800Mi"
+          limits:
+            cpu: {{ if .Values.gpu.enabled }}"1000m"{{ else }}"2000m"{{ end }}
+            memory: "1.5Gi"
+            {{- if and .Values.gpu.enabled .Values.gpu.resourceName }}
+            {{ .Values.gpu.resourceName }}: {{ .Values.gpu.count }}
+            {{- end }}
+
+      {{- if .Values.novnc.enabled }}
+      - name: novnc
+        image: "{{ .Values.novnc.image.repository }}:{{ .Values.novnc.image.tag }}"
+        args: ["--vnc", "127.0.0.1:5900"]
+        ports:
+        - name: novnc
+          containerPort: {{ .Values.novnc.port }}
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "200m"
+            memory: "128Mi"
+      {{- end }}
+
+      {{- if .Values.profileExport.enabled }}
+      - name: profile-export
+        image: "{{ .Values.profileExport.image.repository }}:{{ .Values.profileExport.image.tag }}"
+        ports:
+        - name: http
+          containerPort: {{ .Values.profileExport.port }}
+        volumeMounts:
+        - name: config-export
+          mountPath: /export
+          readOnly: true
+        - name: profile-export-nginx
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: default.conf
+        - name: profile-export-nginx
+          mountPath: /usr/share/nginx/html/index.html
+          subPath: index.html
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "32Mi"
+          limits:
+            cpu: "100m"
+            memory: "64Mi"
+      {{- end }}
+
+      volumes:
+      - name: x11-socket
+        emptyDir: {}
+      - name: pulse-socket
+        emptyDir: {}
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 2Gi
+      {{- if .Values.profileExport.enabled }}
+      - name: config-export
+        emptyDir: {}
+      - name: profile-export-nginx
+        configMap:
+          name: {{ include "ws4000.fullname" . }}-profile-export-nginx
+      {{- end }}
+      - name: music-volume
+        {{- if .Values.nfs.server }}
+        nfs:
+          server: {{ .Values.nfs.server | quote }}
+          path: {{ include "ws4000.nfsExport" . | quote }}
+        {{- else }}
+        hostPath:
+          path: {{ .Values.hostPaths.music | quote }}
+          type: Directory
+        {{- end }}
+      {{- if .Values.config.enabled }}
+      - name: ws4000-config
+        {{- if eq .Values.config.type "pvc" }}
+        persistentVolumeClaim:
+          claimName: {{ include "ws4000.configPvcName" . }}
+        {{- else if eq .Values.config.type "nfs" }}
+        nfs:
+          server: {{ include "ws4000.configNfsServer" . | quote }}
+          path: {{ include "ws4000.configNfsExport" . | quote }}
+        {{- else }}
+        hostPath:
+          path: {{ .Values.config.hostPath.path | quote }}
+          type: {{ .Values.config.hostPath.type | default "Directory" }}
+        {{- end }}
+      {{- end }}
+      {{- if and (or .Values.gpu.enabled .Values.gpu.ws4000Enabled) .Values.gpu.mountHostDri }}
+      - name: dri
+        hostPath:
+          path: /dev/dri
+          type: Directory
+      {{- end }}

@@ -1,0 +1,113 @@
+image:
+  repository: ghcr.io/coconitro/ws4000
+  tag: latest
+
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 90
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+resources: {}
+streamerResources: {}
+
+nfs:
+  server: ""
+  export: /exports/shared
+  subPath: apps/ws4000-music
+  path:
+    music: /exports/shared/apps/ws4000-music
+
+hostPaths:
+  music: /path/on/host/ws4000-music
+
+config:
+  enabled: false
+  type: hostPath
+  seedFromImage: true
+  hostPath:
+    path: /path/on/host/ws4000-config
+    type: Directory
+  nfs:
+    server: ""
+    subPath: apps/ws4000-config
+  pvc:
+    existingClaim: ""
+    storageClass: ""
+    size: 100Mi
+    accessModes:
+      - ReadWriteOnce
+
+branding:
+  streamLogo: ws4000-logo.png
+  x11Background: ws4000-background.jpg
+
+vlc:
+  enabled: true
+  playlist: /music/ws4000-all.xspf
+  normMaxLevel: 0.85
+
+kick:
+  streamKey: ""
+  rtmpUrl: ""
+
+stream:
+  resolution: "800x600"
+  logo: ""
+  logoHeight: 60
+  logoMargin: 10
+  logoAlpha: "0.7"
+  fps: 30
+  videoBitrate: 3500k
+  videoMaxRate: 3500k
+  videoBufSize: 10000k
+  audioBitrate: 160k
+  x264Preset: ultrafast
+  outputWidth: 1280
+  outputHeight: 720
+
+gpu:
+  enabled: false
+  mode: vaapi
+  device: /dev/dri/renderD128
+  libvaDriverName: radeonsi
+  mountHostDri: true
+  ws4000Enabled: false
+  resourceName: ""
+  count: 1
+  supplementalGroups: []
+  privileged: false
+  nodeSelector: {}
+  tolerations: []
+
+novnc:
+  enabled: true
+  image:
+    repository: gotget/novnc
+    tag: latest
+  port: 6080
+
+profileExport:
+  enabled: true
+  image:
+    repository: nginx
+    tag: alpine
+  port: 8080
+  syncIntervalSeconds: 15
+
+vnc:
+  password: ""
+
+ingress:
+  enabled: true
+  className: nginx
+  host: ws4000.example.com
+  annotations: {}
+  paths:
+    vnc: /
+    profileExport: /export
+  basicAuth:
+    enabled: true
+    username: admin
+    password: ""

@@ -1,0 +1,35 @@
+.DS_Store
+assets/ws4000/radar.cache
+assets/ws4000/imgui.ini
+assets/ws4000/profile.dat.old
+*.backup*
+dist/
+
+# Simulator binaries (download with build/download-ws4000.sh)
+assets/ws4000/WS4000v4.exe
+assets/ws4000/Data.000
+assets/ws4000/fmod64.dll
+
+# User config and branding (external config volume)
+assets/ws4000/profile.dat
+assets/ws4000/config.w4k
+assets/ws4000/Config.w4k
+assets/ws4000/ws4000-logo.png
+assets/ws4000/ws4000-background.jpg
+profile.dat.bak.*
+
+# Personal music library and playlists (music volume)
+assets/music/
+
+# Local helm overrides and secrets
+.env
+.env.*
+*.env
+values-local.yaml
+secrets.yaml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.log

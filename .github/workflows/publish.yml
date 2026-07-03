@@ -1,0 +1,52 @@
+name: Publish
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install extract tools
+        run: sudo apt-get update && sudo apt-get install -y p7zip-full unzip
+
+      - name: Download WS4000 assets
+        run: ./build/download-ws4000.sh
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/ws4000:latest
+            ghcr.io/${{ github.repository_owner }}/ws4000:sha-${{ github.sha }}
+          build-args: WS4000_BUST=${{ github.sha }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint and publish chart
+        env:
+          CHART_VERSION: 0.2.${{ github.run_number }}
+        run: |
+          sed -i "s/^version:.*/version: ${CHART_VERSION}/" deploy/helm/ws4000/Chart.yaml
+          helm lint deploy/helm/ws4000
+          helm package deploy/helm/ws4000 -d dist/charts
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
+          helm push "dist/charts/ws4000-${CHART_VERSION}.tgz" "oci://ghcr.io/${{ github.repository_owner }}"

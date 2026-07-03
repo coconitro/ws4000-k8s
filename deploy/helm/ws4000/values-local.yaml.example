@@ -1,0 +1,37 @@
+# Local overlay — copy to values-local.yaml (gitignored)
+
+# nfs:
+#   server: nfs.example.com
+#   export: /exports/shared
+#   subPath: apps/ws4000-music
+
+config:
+  enabled: true
+  type: nfs
+  seedFromImage: false
+  nfs:
+    subPath: apps/ws4000-config
+
+branding:
+  streamLogo: ws4000-logo.png
+  x11Background: ws4000-background.jpg
+
+stream:
+  logo: /config/ws4000-logo.png
+
+vlc:
+  enabled: true
+
+ingress:
+  host: ws4000.example.com
+  className: nginx
+
+gpu:
+  enabled: true
+  ws4000Enabled: false
+  supplementalGroups: [109]
+  privileged: true
+
+image:
+  repository: ghcr.io/coconitro/ws4000
+  tag: latest

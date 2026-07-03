@@ -1,0 +1,6 @@
+#!/bin/sh
+# Force always the 64-bit loader from Wine-GE.
+# The original wrapper in the tarball does "exec .../wine" on various paths
+# (including line ~46), which produces exactly:
+#   /opt/wine-ge/bin/wineboot: 46: exec: /opt/wine-ge/bin/wine: not found
+exec /opt/wine-ge/bin/wine64 "$@"
