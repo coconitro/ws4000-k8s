@@ -39,6 +39,22 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- .Values.config.nfs.subPath | default "apps/ws4000-config" -}}
 {{- end }}
 
+{{- define "ws4000.configFileSubPath" -}}
+{{- $file := .file -}}
+{{- $ctx := .context -}}
+{{- if eq $ctx.Values.config.type "nfs" -}}
+{{- printf "%s/%s" (include "ws4000.configNfsSubPath" $ctx) $file -}}
+{{- else -}}
+{{- $file -}}
+{{- end -}}
+{{- end }}
+
+{{- define "ws4000.configDirSubPath" -}}
+{{- if eq .Values.config.type "nfs" -}}
+{{- include "ws4000.configNfsSubPath" . -}}
+{{- end -}}
+{{- end }}
+
 {{- define "ws4000.configNfsServer" -}}
 {{- .Values.config.nfs.server | default .Values.nfs.server -}}
 {{- end }}

@@ -99,6 +99,9 @@ spec:
         volumeMounts:
         - name: ws4000-config
           mountPath: /config-mount
+          {{- if eq .Values.config.type "nfs" }}
+          subPath: {{ include "ws4000.configDirSubPath" . | quote }}
+          {{- end }}
       {{- end }}
       {{- if .Values.profileExport.enabled }}
       - name: seed-profile-export
@@ -123,6 +126,9 @@ spec:
         - name: ws4000-config
           mountPath: /config-src
           readOnly: true
+          {{- if eq .Values.config.type "nfs" }}
+          subPath: {{ include "ws4000.configDirSubPath" . | quote }}
+          {{- end }}
         {{- end }}
       {{- end }}
       containers:
@@ -186,14 +192,14 @@ spec:
         {{- if .Values.config.enabled }}
         - name: ws4000-config
           mountPath: /app/WS4000v4/profile.dat
-          subPath: profile.dat
+          subPath: {{ include "ws4000.configFileSubPath" (dict "context" . "file" "profile.dat") | quote }}
         - name: ws4000-config
           mountPath: /app/WS4000v4/Config.w4k
-          subPath: Config.w4k
+          subPath: {{ include "ws4000.configFileSubPath" (dict "context" . "file" "Config.w4k") | quote }}
         {{- if .Values.branding.x11Background }}
         - name: ws4000-config
           mountPath: /config/{{ .Values.branding.x11Background }}
-          subPath: {{ .Values.branding.x11Background | quote }}
+          subPath: {{ include "ws4000.configFileSubPath" (dict "context" . "file" .Values.branding.x11Background) | quote }}
         {{- end }}
         {{- end }}
         - name: x11-socket
@@ -256,7 +262,7 @@ spec:
         {{- if and .Values.config.enabled .Values.branding.streamLogo }}
         - name: ws4000-config
           mountPath: /config/{{ .Values.branding.streamLogo }}
-          subPath: {{ .Values.branding.streamLogo | quote }}
+          subPath: {{ include "ws4000.configFileSubPath" (dict "context" . "file" .Values.branding.streamLogo) | quote }}
         {{- end }}
         env:
         - name: RESOLUTION
