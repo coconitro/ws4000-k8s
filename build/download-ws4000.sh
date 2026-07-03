@@ -29,31 +29,27 @@ curl -fL "$URL" -o "$archive"
 extract_dir="${tmpdir}/extract"
 mkdir -p "$extract_dir"
 
-if file "$archive" | grep -qi 'zip'; then
+file_type="$(file -b "$archive")"
+echo "Archive type: ${file_type}"
+
+if echo "$file_type" | grep -Eiq '7-zip|7z archive'; then
+  7z x "$archive" -o"$extract_dir" >/dev/null
+elif echo "$file_type" | grep -Eiq 'zip archive|Zip archive'; then
   unzip -q "$archive" -d "$extract_dir"
-elif file "$archive" | grep -Eiq '7-zip|7z'; then
-  if command -v 7z >/dev/null 2>&1; then
-    7z x "$archive" -o"$extract_dir" >/dev/null
-  elif command -v 7za >/dev/null 2>&1; then
-    7za x "$archive" -o"$extract_dir" >/dev/null
-  else
-    echo "ERROR: 7z archive but 7z/7za not installed" >&2
-    exit 1
-  fi
 else
-  # Try unzip first, then 7z
-  if unzip -t "$archive" >/dev/null 2>&1; then
+  # Taiganet currently serves .7z; try 7z first, then zip.
+  if 7z x "$archive" -o"$extract_dir" >/dev/null 2>&1; then
+    :
+  elif unzip -t "$archive" >/dev/null 2>&1; then
     unzip -q "$archive" -d "$extract_dir"
-  elif command -v 7z >/dev/null 2>&1; then
-    7z x "$archive" -o"$extract_dir" >/dev/null
   else
-    echo "ERROR: unknown archive format: $(file -b "$archive")" >&2
+    echo "ERROR: unknown archive format: ${file_type}" >&2
     exit 1
   fi
 fi
 
 echo "=== Extracting into ${DEST} ==="
-shopt -s nullglob globstar
+shopt -s nullglob
 found_exe=()
 while IFS= read -r -d '' exe; do
   found_exe+=("$exe")
