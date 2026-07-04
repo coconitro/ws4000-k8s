@@ -9,6 +9,13 @@ livenessProbe:
   timeoutSeconds: 5
   failureThreshold: 3
 
+freezeDetection:
+  enabled: true
+  staleThresholdSeconds: 300
+  gracePeriodSeconds: 120
+  softRecoveryEnabled: true
+  sampleRegion: ""
+
 resources: {}
 streamerResources: {}
 

@@ -142,6 +142,7 @@ if command -v xdotool >/dev/null 2>&1; then
   IFS=x read -r SCREEN_W SCREEN_H <<< "${RESOLUTION}"
   xdotool mousemove --sync $((SCREEN_W + 100)) $((SCREEN_H + 100))
   echo "Mouse moved off screen"
+  date +%s >/tmp/ws4000-sim-started-at
 else
   echo "WARNING: xdotool not installed; skipping Simulation menu clicks"
 fi
@@ -223,16 +224,28 @@ else
   cat /tmp/x11vnc.log 2>/dev/null || true
 fi
 
-# Keep the container alive only while WS4000 is running. When the sim exits,
-# exit non-zero so kubelet restarts the pod (liveness probe is a second line of defense).
+# Keep the container alive only while WS4000 is running and the display is updating.
+# When the sim exits or freezes, exit non-zero so kubelet restarts the pod.
 WATCH_INTERVAL="${WS4000_WATCH_INTERVAL:-30}"
-echo "Watching WS4000v4.exe (interval ${WATCH_INTERVAL}s)"
+echo "Watching WS4000v4.exe (interval ${WATCH_INTERVAL}s, freeze detection enabled=${WS4000_FREEZE_DETECTION_ENABLED:-1})"
 while true; do
-  if ! pgrep -f 'WS4000v4\.exe' >/dev/null 2>&1; then
+  check_result=0
+  /usr/local/bin/check-ws4000-alive.sh || check_result=$?
+
+  if [ "$check_result" -eq 1 ]; then
     echo "ERROR: WS4000v4.exe exited" >&2
     set_x11_background
     tail -30 /tmp/wine.log 2>/dev/null || true
     exit 1
   fi
+
+  if [ "$check_result" -eq 2 ]; then
+    echo "ERROR: WS4000 display frozen after soft recovery" >&2
+    tail -30 /tmp/wine.log 2>/dev/null || true
+    set_x11_background
+    exit 1
+  fi
+
+  rm -f /tmp/ws4000-soft-recovery-attempted
   sleep "$WATCH_INTERVAL"
 done
