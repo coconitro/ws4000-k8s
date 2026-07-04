@@ -48,3 +48,10 @@ ingress:
 #   mode: vaapi
 #   ws4000Enabled: false
 #   supplementalGroups: [109]
+
+# freezeDetection:
+#   enabled: true
+#   staleThresholdSeconds: 300
+#   gracePeriodSeconds: 120
+#   softRecoveryEnabled: true
+#   sampleRegion: "400x300+200+150"

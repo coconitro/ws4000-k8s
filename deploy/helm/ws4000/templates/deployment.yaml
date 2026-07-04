@@ -181,6 +181,18 @@ spec:
         - name: WS4000_USE_XORG
           value: "1"
         {{- end }}
+        - name: WS4000_FREEZE_DETECTION_ENABLED
+          value: {{ .Values.freezeDetection.enabled | ternary "1" "0" | quote }}
+        - name: WS4000_FREEZE_STALE_THRESHOLD_SECONDS
+          value: {{ .Values.freezeDetection.staleThresholdSeconds | quote }}
+        - name: WS4000_FREEZE_GRACE_PERIOD_SECONDS
+          value: {{ .Values.freezeDetection.gracePeriodSeconds | quote }}
+        - name: WS4000_FREEZE_SOFT_RECOVERY_ENABLED
+          value: {{ .Values.freezeDetection.softRecoveryEnabled | ternary "1" "0" | quote }}
+        {{- if .Values.freezeDetection.sampleRegion }}
+        - name: WS4000_FREEZE_SAMPLE_REGION
+          value: {{ .Values.freezeDetection.sampleRegion | quote }}
+        {{- end }}
         ports:
         - containerPort: 5900
         volumeMounts:
