@@ -88,8 +88,7 @@ spec:
           - |
             set -euo pipefail
             mount="/config-mount"
-            for pair in "profile.dat:profile.dat" "Config.w4k:Config.w4k"; do
-              file="${pair%%:*}"
+            for file in profile.dat Config.w4k ws4000-background.jpg ws4000-logo.png; do
               if [ ! -f "${mount}/${file}" ] && [ -f "/app/WS4000v4/${file}" ]; then
                 cp -f "/app/WS4000v4/${file}" "${mount}/${file}"
                 echo "seeded ${file}"

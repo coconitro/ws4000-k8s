@@ -30,6 +30,9 @@ if [ -f "/tmp/Xorg.${DISPLAY_NUM}.log" ]; then
   tail -15 "/tmp/Xorg.${DISPLAY_NUM}.log" 2>/dev/null || true
 fi
 # Solid black root unless a background image is configured.
+if { [ -z "${X11_BACKGROUND:-}" ] || [ ! -f "$X11_BACKGROUND" ]; } && [ -f /app/WS4000v4/ws4000-background.jpg ]; then
+  X11_BACKGROUND=/app/WS4000v4/ws4000-background.jpg
+fi
 set_x11_background() {
   if [ -n "${X11_BACKGROUND:-}" ] && [ -f "$X11_BACKGROUND" ]; then
     echo "Setting X11 background: $X11_BACKGROUND"
