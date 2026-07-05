@@ -15,9 +15,12 @@ GRACE_PERIOD="${WS4000_FREEZE_GRACE_PERIOD_SECONDS:-120}"
 RESOLUTION="${RESOLUTION:-800x600}"
 SAMPLE_REGION="${WS4000_FREEZE_SAMPLE_REGION:-}"
 
-HASH_FILE="/tmp/ws4000-frame-hash"
-STALE_SINCE_FILE="/tmp/ws4000-stale-since"
-SIM_STARTED_FILE="/tmp/ws4000-sim-started-at"
+STATE_DIR="${WS4000_STATE_DIR:-/tmp/ws4000-state}"
+HASH_FILE="${STATE_DIR}/frame-hash"
+STALE_SINCE_FILE="${STATE_DIR}/stale-since"
+SIM_STARTED_FILE="${STATE_DIR}/sim-started-at"
+
+mkdir -p "$STATE_DIR"
 
 if ! pgrep -f 'WS4000v4\.exe' >/dev/null 2>&1; then
   echo "WS4000v4.exe not running" >&2
@@ -78,14 +81,14 @@ fi
 
 if [ ! -f "$HASH_FILE" ]; then
   echo "$current_hash" >"$HASH_FILE"
-  rm -f "$STALE_SINCE_FILE"
+  rm -f "$STALE_SINCE_FILE" 2>/dev/null || true
   exit 0
 fi
 
 previous_hash="$(cat "$HASH_FILE")"
 if [ "$current_hash" != "$previous_hash" ]; then
   echo "$current_hash" >"$HASH_FILE"
-  rm -f "$STALE_SINCE_FILE"
+  rm -f "$STALE_SINCE_FILE" 2>/dev/null || true
   exit 0
 fi
 
@@ -97,10 +100,10 @@ fi
 stale_since="$(cat "$STALE_SINCE_FILE")"
 stale_seconds=$((now - stale_since))
 if [ "$stale_seconds" -ge "$STALE_THRESHOLD" ]; then
-  if [ "${WS4000_FREEZE_SOFT_RECOVERY_ENABLED:-1}" = "1" ] && [ ! -f /tmp/ws4000-soft-recovery-attempted ]; then
+  if [ "${WS4000_FREEZE_SOFT_RECOVERY_ENABLED:-1}" = "1" ] && [ ! -f "${STATE_DIR}/soft-recovery-attempted" ]; then
     echo "WS4000 display frozen for ${stale_seconds}s; attempting soft recovery" >&2
     if /usr/local/bin/recover-ws4000-sim.sh; then
-      touch /tmp/ws4000-soft-recovery-attempted
+      touch "${STATE_DIR}/soft-recovery-attempted"
       exit 0
     fi
     echo "WARNING: soft recovery failed" >&2

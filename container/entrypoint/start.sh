@@ -145,7 +145,8 @@ if command -v xdotool >/dev/null 2>&1; then
   IFS=x read -r SCREEN_W SCREEN_H <<< "${RESOLUTION}"
   xdotool mousemove --sync $((SCREEN_W + 100)) $((SCREEN_H + 100))
   echo "Mouse moved off screen"
-  date +%s >/tmp/ws4000-sim-started-at
+  mkdir -p "${WS4000_STATE_DIR:-/tmp/ws4000-state}"
+  date +%s >"${WS4000_STATE_DIR:-/tmp/ws4000-state}/sim-started-at"
 else
   echo "WARNING: xdotool not installed; skipping Simulation menu clicks"
 fi
@@ -249,6 +250,6 @@ while true; do
     exit 1
   fi
 
-  rm -f /tmp/ws4000-soft-recovery-attempted
+  rm -f "${WS4000_STATE_DIR:-/tmp/ws4000-state}/soft-recovery-attempted" 2>/dev/null || true
   sleep "$WATCH_INTERVAL"
 done

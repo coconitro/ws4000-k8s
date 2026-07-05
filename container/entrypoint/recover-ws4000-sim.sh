@@ -27,6 +27,8 @@ sleep 1
 IFS=x read -r screen_w screen_h <<< "$RESOLUTION"
 xdotool mousemove --sync $((screen_w + 100)) $((screen_h + 100))
 
-rm -f /tmp/ws4000-frame-hash /tmp/ws4000-stale-since
-date +%s >/tmp/ws4000-sim-started-at
+STATE_DIR="${WS4000_STATE_DIR:-/tmp/ws4000-state}"
+mkdir -p "$STATE_DIR"
+rm -f "${STATE_DIR}/frame-hash" "${STATE_DIR}/stale-since" 2>/dev/null || true
+date +%s >"${STATE_DIR}/sim-started-at"
 echo "Soft recovery complete"

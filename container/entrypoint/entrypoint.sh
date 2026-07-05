@@ -153,5 +153,10 @@ else
 fi
 
 fix_display_permissions
+
+mkdir -p /tmp/ws4000-state
+chown wineuser:wineuser /tmp/ws4000-state
+chmod 700 /tmp/ws4000-state
+
 exec setpriv --reuid=1000 --regid=1000 --groups="$(wineuser_groups)" -- \
   env HOME=/home/wineuser XDG_RUNTIME_DIR=/tmp/pulse/run /start.sh
