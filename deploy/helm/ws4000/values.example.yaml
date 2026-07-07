@@ -7,6 +7,9 @@ image:
 kick:
   streamKey: ""          # REQUIRED
   rtmpUrl: ""            # REQUIRED
+  # channelSlug: "your-channel"
+  # healthCheck:
+  #   enabled: true      # checks every 10 min by default
 
 hostPaths:
   music: /path/on/host/ws4000-music

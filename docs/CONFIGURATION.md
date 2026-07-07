@@ -10,6 +10,7 @@ GPU details: [GPU.md](GPU.md)
 |-------|-------------|
 | `kick.streamKey` | Kick RTMP stream key |
 | `kick.rtmpUrl` | Kick RTMP ingest URL |
+| `kick.channelSlug` | Kick channel slug (for live health check) |
 | `hostPaths.music` | Node music dir (when NFS unset) |
 | `ingress.basicAuth.password` | When `ingress.basicAuth.enabled` |
 
@@ -30,6 +31,29 @@ GPU details: [GPU.md](GPU.md)
 | `profileExport.enabled` | `true` | Profile HTTP export |
 | `taiganetTimeProxy.enabled` | `false` | Stub `tm.php` ServerTime locally when the real endpoint hangs or bans cloud IPs, so the sim can proceed to tgftp |
 
+## Kick stream health check
+
+Runs inside the **streamer** container (not a separate sidecar). When enabled, a background loop checks every `kick.healthCheck.intervalSeconds` (default **600** = 10 minutes) whether ffmpeg is running and, if `kick.channelSlug` is set, whether Kick reports the channel as live.
+
+| Value | Default | Description |
+|-------|---------|-------------|
+| `kick.healthCheck.enabled` | `false` | Enable periodic Kick live verification |
+| `kick.healthCheck.intervalSeconds` | `600` | Seconds between checks |
+| `kick.healthCheck.restartOnFailure` | `true` | Kill ffmpeg to force reconnect when not live |
+| `kick.channelSlug` | `""` | Your Kick channel slug (required for remote live check) |
+| `kick.healthCheck.apiAccessToken` | `""` | Optional Kick API token (`channel:read`) if the public API is blocked |
+
+Example:
+
+```yaml
+kick:
+  streamKey: "YOUR_KEY"
+  rtmpUrl: "YOUR_RTMP_URL"
+  channelSlug: "your-channel"
+  healthCheck:
+    enabled: true
+```
+
 ## Environment variables (ws4000 container)
 
 | Variable | Default | Description |
@@ -44,3 +68,5 @@ GPU details: [GPU.md](GPU.md)
 ## Streamer env vars
 
 Set via `stream.*` and `gpu.*` Helm values. See [GPU.md](GPU.md) for `STREAM_USE_GPU`, `STREAM_GPU_MODE`, etc.
+
+Kick health check (streamer container only): `KICK_HEALTH_CHECK_ENABLED`, `KICK_HEALTH_CHECK_INTERVAL` (default `600`), `KICK_CHANNEL_SLUG`, `KICK_HEALTH_CHECK_RESTART_ON_FAIL`, `KICK_API_ACCESS_TOKEN`.

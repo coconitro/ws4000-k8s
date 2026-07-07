@@ -188,6 +188,21 @@ stream_gpu_amf() {
     -f flv "$KICK_OUT" || true
 }
 
+if [ "${KICK_HEALTH_CHECK_ENABLED:-0}" = "1" ]; then
+  KICK_HEALTH_INTERVAL="${KICK_HEALTH_CHECK_INTERVAL:-600}"
+  (
+    echo "Kick health check enabled (interval ${KICK_HEALTH_INTERVAL}s, slug=${KICK_CHANNEL_SLUG:-unset})"
+    while true; do
+      sleep "$KICK_HEALTH_INTERVAL"
+      check_result=0
+      /usr/local/bin/check-kick-stream.sh || check_result=$?
+      if [ "$check_result" -eq 3 ]; then
+        echo "WARNING: Kick health check could not reach Kick API; will retry next interval" >&2
+      fi
+    done
+  ) &
+fi
+
 echo "Ready — starting ffmpeg stream (capture ${RES} -> ${OUT_W}x${OUT_H} 16:9, ${FPS}fps ${VBIT}, ${ENCODER_MODE})"
 while true; do
   "$STREAM_FUNC"
