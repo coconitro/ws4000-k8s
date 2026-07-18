@@ -1,0 +1,84 @@
+{{- if .Values.taiganetTimeProxy.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ws4000.fullname" . }}-taiganet-time-proxy
+  labels:
+    {{- include "ws4000.labels" . | nindent 4 }}
+data:
+  default.conf: |
+    # Optional local stand-in for https://www.taiganet.com/tm.php.
+    # WS4000 expects an 8-byte little-endian uint64 unix timestamp, then continues
+    # to tgftp / v4data. Real tm.php often hangs or AWS-bans cloud egress.
+    map $http_upgrade $connection_upgrade {
+        default upgrade;
+        ''      close;
+    }
+
+    server {
+        listen 443 ssl;
+        server_name www.taiganet.com taiganet.com;
+
+        ssl_certificate     /certs/tls.crt;
+        ssl_certificate_key /certs/tls.key;
+        ssl_protocols       TLSv1.2 TLSv1.3;
+
+        # Fresh file each second from the stub writer; do not cache metadata.
+        open_file_cache off;
+
+        location = /tm.php {
+            alias /tm-stub/tm.bin;
+            default_type application/octet-stream;
+            add_header Cache-Control "no-store";
+            add_header X-WS4000-Time-Proxy "stub";
+        }
+
+        # Everything else (v4data.php, etc.) goes to the real host via public DNS,
+        # bypassing pod hostAliases (nginx resolver, not /etc/hosts).
+        location / {
+            resolver {{ .Values.taiganetTimeProxy.resolver | default "8.8.8.8" }} ipv6=off valid=300s;
+            set $taiganet_upstream {{ .Values.taiganetTimeProxy.upstream | default "https://www.taiganet.com" }};
+            proxy_http_version 1.1;
+            proxy_ssl_server_name on;
+            proxy_ssl_name www.taiganet.com;
+            proxy_set_header Host www.taiganet.com;
+            proxy_set_header Connection $connection_upgrade;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_connect_timeout 15s;
+            proxy_send_timeout 120s;
+            proxy_read_timeout 120s;
+            proxy_pass $taiganet_upstream$request_uri;
+        }
+    }
+
+  entrypoint.sh: |
+    #!/bin/sh
+    set -eu
+
+    stub_dir=/tm-stub
+    mkdir -p "$stub_dir"
+
+    write_timestamp() {
+      # Little-endian uint64 unix seconds — matches WS4000 ServerTime reader.
+      t=$(date +%s)
+      i=0
+      : > "$stub_dir/tm.bin.tmp"
+      while [ "$i" -lt 8 ]; do
+        b=$(( (t >> (i * 8)) & 255 ))
+        # shellcheck disable=SC2059
+        printf "$(printf '\\%03o' "$b")" >> "$stub_dir/tm.bin.tmp"
+        i=$((i + 1))
+      done
+      mv "$stub_dir/tm.bin.tmp" "$stub_dir/tm.bin"
+    }
+
+    write_timestamp
+    (
+      while true; do
+        write_timestamp
+        sleep 1
+      done
+    ) &
+
+    exec nginx -g 'daemon off;'
+{{- end }}

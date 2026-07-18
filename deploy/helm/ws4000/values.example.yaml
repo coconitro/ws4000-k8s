@@ -55,3 +55,8 @@ ingress:
 #   gracePeriodSeconds: 120
 #   softRecoveryEnabled: true
 #   sampleRegion: "400x300+200+150"
+
+# Stub https://www.taiganet.com/tm.php when it hangs or bans cloud IPs, so the
+# sim can continue to tgftp. Off by default.
+# taiganetTimeProxy:
+#   enabled: true

@@ -17,6 +17,12 @@ spec:
         {{- include "ws4000.selectorLabels" . | nindent 8 }}
     spec:
       shareProcessNamespace: true
+      {{- if .Values.taiganetTimeProxy.enabled }}
+      hostAliases:
+        - ip: "127.0.0.1"
+          hostnames:
+            - www.taiganet.com
+      {{- end }}
       {{- if and (or .Values.gpu.enabled .Values.gpu.ws4000Enabled) .Values.gpu.supplementalGroups }}
       securityContext:
         supplementalGroups:
@@ -35,6 +41,35 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       initContainers:
+      {{- if .Values.taiganetTimeProxy.enabled }}
+      - name: taiganet-time-proxy-ca-bundle
+        image: "{{ .Values.taiganetTimeProxy.image.repository }}:{{ .Values.taiganetTimeProxy.image.tag }}"
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            set -eu
+            # Prefer distro CA bundle so tgftp / other HTTPS keep working; append our proxy CA.
+            if [ -f /etc/ssl/certs/ca-certificates.crt ]; then
+              base=/etc/ssl/certs/ca-certificates.crt
+            elif [ -f /etc/ssl/cert.pem ]; then
+              base=/etc/ssl/cert.pem
+            else
+              base=
+            fi
+            if [ -n "$base" ]; then
+              cat "$base" /proxy-certs/ca.crt > /ca-bundle/ca-bundle.crt
+            else
+              cp /proxy-certs/ca.crt /ca-bundle/ca-bundle.crt
+            fi
+            cp /proxy-certs/tls.crt /proxy-certs/tls.key /ca-bundle/
+            ls -la /ca-bundle
+        volumeMounts:
+        - name: taiganet-time-proxy-secret
+          mountPath: /proxy-certs
+          readOnly: true
+        - name: taiganet-time-proxy-ca
+          mountPath: /ca-bundle
+      {{- end }}
       - name: fix-pulse-runtime
         image: busybox:1.36
         command: ["/bin/sh", "-c"]
@@ -134,6 +169,22 @@ spec:
       - name: ws4000
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         workingDir: /app/WS4000v4
+        {{- if .Values.taiganetTimeProxy.enabled }}
+        # Wait for the local tm.php stub before starting Wine/WS4000.
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            set -euo pipefail
+            echo "Waiting for taiganet time proxy on 127.0.0.1:443..."
+            for i in $(seq 1 60); do
+              if (echo > /dev/tcp/127.0.0.1/443) >/dev/null 2>&1; then
+                echo "taiganet time proxy is up"
+                break
+              fi
+              sleep 1
+            done
+            exec /entrypoint.sh
+        {{- end }}
         {{- if and .Values.gpu.ws4000Enabled .Values.gpu.privileged }}
         securityContext:
           privileged: true
@@ -192,6 +243,14 @@ spec:
         - name: WS4000_FREEZE_SAMPLE_REGION
           value: {{ .Values.freezeDetection.sampleRegion | quote }}
         {{- end }}
+        {{- if .Values.taiganetTimeProxy.enabled }}
+        - name: SSL_CERT_FILE
+          value: /etc/ssl/certs/ca-certificates.crt
+        - name: CURL_CA_BUNDLE
+          value: /etc/ssl/certs/ca-certificates.crt
+        - name: REQUESTS_CA_BUNDLE
+          value: /etc/ssl/certs/ca-certificates.crt
+        {{- end }}
         ports:
         - containerPort: 5900
         volumeMounts:
@@ -212,6 +271,12 @@ spec:
           mountPath: /config/{{ .Values.branding.x11Background }}
           subPath: {{ include "ws4000.configFileSubPath" (dict "context" . "file" .Values.branding.x11Background) | quote }}
         {{- end }}
+        {{- end }}
+        {{- if .Values.taiganetTimeProxy.enabled }}
+        - name: taiganet-time-proxy-ca
+          mountPath: /etc/ssl/certs/ca-certificates.crt
+          subPath: ca-bundle.crt
+          readOnly: true
         {{- end }}
         - name: x11-socket
           mountPath: /tmp/.X11-unix
@@ -376,7 +441,53 @@ spec:
             memory: "64Mi"
       {{- end }}
 
+      {{- if .Values.taiganetTimeProxy.enabled }}
+      - name: taiganet-time-proxy
+        image: "{{ .Values.taiganetTimeProxy.image.repository }}:{{ .Values.taiganetTimeProxy.image.tag }}"
+        command: ["/bin/sh", "/scripts/entrypoint.sh"]
+        ports:
+        - name: taiganet-https
+          containerPort: 443
+        volumeMounts:
+        - name: taiganet-time-proxy-config
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: default.conf
+        - name: taiganet-time-proxy-config
+          mountPath: /scripts/entrypoint.sh
+          subPath: entrypoint.sh
+        - name: taiganet-time-proxy-ca
+          mountPath: /certs
+          readOnly: true
+        - name: taiganet-time-proxy-stub
+          mountPath: /tm-stub
+        readinessProbe:
+          tcpSocket:
+            port: 443
+          initialDelaySeconds: 2
+          periodSeconds: 5
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "32Mi"
+          limits:
+            cpu: "200m"
+            memory: "64Mi"
+      {{- end }}
+
       volumes:
+      {{- if .Values.taiganetTimeProxy.enabled }}
+      - name: taiganet-time-proxy-secret
+        secret:
+          secretName: {{ include "ws4000.fullname" . }}-taiganet-time-proxy
+      - name: taiganet-time-proxy-ca
+        emptyDir: {}
+      - name: taiganet-time-proxy-config
+        configMap:
+          name: {{ include "ws4000.fullname" . }}-taiganet-time-proxy
+          defaultMode: 0755
+      - name: taiganet-time-proxy-stub
+        emptyDir: {}
+      {{- end }}
       - name: x11-socket
         emptyDir: {}
       - name: pulse-socket

@@ -28,6 +28,7 @@ GPU details: [GPU.md](GPU.md)
 | `ingress.host` | `ws4000.example.com` | Ingress hostname |
 | `novnc.enabled` | `true` | Web VNC sidecar |
 | `profileExport.enabled` | `true` | Profile HTTP export |
+| `taiganetTimeProxy.enabled` | `false` | Stub `tm.php` ServerTime locally when the real endpoint hangs or bans cloud IPs, so the sim can proceed to tgftp |
 
 ## Environment variables (ws4000 container)
 

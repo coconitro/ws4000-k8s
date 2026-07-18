@@ -73,6 +73,17 @@ helm upgrade ws4000 ./deploy/helm/ws4000 \
   --set gpu.supplementalGroups={109}
 ```
 
+## Taiganet ServerTime proxy (optional)
+
+WS4000 fetches `https://www.taiganet.com/tm.php` for ServerTime (8-byte unix timestamp) before continuing to tgftp / `v4data`. That endpoint often hangs or bans cloud egress.
+
+```yaml
+taiganetTimeProxy:
+  enabled: true
+```
+
+This adds a pod sidecar that answers `/tm.php` locally and reverse-proxies other taiganet paths upstream.
+
 ## Web UI
 
 | URL | Purpose |

@@ -106,6 +106,18 @@ profileExport:
 vnc:
   password: ""
 
+# Optional local stand-in for https://www.taiganet.com/tm.php (ServerTime).
+# Enable when the real endpoint hangs or cloud egress is banned (ZB Block), so
+# the simulator can proceed to tgftp / v4data. Hijacks www.taiganet.com via
+# hostAliases to a pod sidecar; other paths are reverse-proxied upstream.
+taiganetTimeProxy:
+  enabled: false
+  image:
+    repository: nginx
+    tag: alpine
+  upstream: https://www.taiganet.com
+  resolver: "8.8.8.8"
+
 ingress:
   enabled: true
   className: nginx
