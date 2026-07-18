@@ -22,6 +22,11 @@ VLC: disabled (WS4000 handles audio)
 Example values: deploy/helm/ws4000/values.example.yaml
 GPU: docs/GPU.md
 
+{{- if .Values.taiganetTimeProxy.enabled }}
+
+Taiganet tm.php time proxy: ENABLED (local stub → then tgftp/v4data)
+{{- end }}
+
 {{- if .Values.ingress.enabled }}
 
 Web: http://{{ .Values.ingress.host }}/
