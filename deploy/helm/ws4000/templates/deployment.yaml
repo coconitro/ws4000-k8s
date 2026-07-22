@@ -389,6 +389,20 @@ spec:
             secretKeyRef:
               name: {{ include "ws4000.fullname" . }}-kick
               key: rtmp-url
+        - name: KICK_HEALTH_CHECK_ENABLED
+          value: {{ .Values.kick.healthCheck.enabled | ternary "1" "0" | quote }}
+        - name: KICK_HEALTH_CHECK_INTERVAL
+          value: {{ .Values.kick.healthCheck.intervalSeconds | quote }}
+        - name: KICK_HEALTH_CHECK_RESTART_ON_FAIL
+          value: {{ .Values.kick.healthCheck.restartOnFailure | ternary "1" "0" | quote }}
+        {{- if .Values.kick.channelSlug }}
+        - name: KICK_CHANNEL_SLUG
+          value: {{ .Values.kick.channelSlug | quote }}
+        {{- end }}
+        {{- if .Values.kick.healthCheck.apiAccessToken }}
+        - name: KICK_API_ACCESS_TOKEN
+          value: {{ .Values.kick.healthCheck.apiAccessToken | quote }}
+        {{- end }}
         resources:
           requests:
             cpu: {{ if .Values.gpu.enabled }}"400m"{{ else }}"800m"{{ end }}

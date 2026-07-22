@@ -58,6 +58,12 @@ vlc:
 kick:
   streamKey: ""
   rtmpUrl: ""
+  channelSlug: ""
+  healthCheck:
+    enabled: false
+    intervalSeconds: 600
+    restartOnFailure: true
+    apiAccessToken: ""
 
 stream:
   resolution: "800x600"
