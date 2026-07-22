@@ -20,6 +20,20 @@ check_ffmpeg_running() {
   return 1
 }
 
+# Kick sometimes closes RTMPS while local ffmpeg keeps encoding into a
+# half-closed socket (CLOSE_WAIT on :443). That looks "healthy" to pgrep
+# but Kick shows offline — force a reconnect in that case.
+check_rtmp_socket() {
+  local close_wait established
+  close_wait="$(awk 'NR>1 && $4=="08" && $3 ~ /:01BB$/ {c++} END{print c+0}' /proc/net/tcp 2>/dev/null || echo 0)"
+  established="$(awk 'NR>1 && $4=="01" && $3 ~ /:01BB$/ {c++} END{print c+0}' /proc/net/tcp 2>/dev/null || echo 0)"
+  if [ "$close_wait" -gt 0 ] && [ "$established" -eq 0 ]; then
+    echo "Kick health check: RTMP socket in CLOSE_WAIT (Kick hung up)" >&2
+    return 1
+  fi
+  return 0
+}
+
 fetch_kick_channel_json() {
   local slug="$1"
   local body http_code tmp
@@ -75,6 +89,11 @@ restart_ffmpeg_if_enabled() {
 }
 
 check_ffmpeg_running || exit 1
+
+if ! check_rtmp_socket; then
+  restart_ffmpeg_if_enabled
+  exit 2
+fi
 
 if [ -z "$CHANNEL_SLUG" ]; then
   echo "Kick health check: ffmpeg running (remote check skipped — set KICK_CHANNEL_SLUG for live verification)" >&2
