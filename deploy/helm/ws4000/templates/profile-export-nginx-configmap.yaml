@@ -48,5 +48,5 @@ data:
         {{- end }}
     }
   index.html: |
-{{ .Files.Get "static/index.html" | replace "__KICK_CHANNEL_SLUG__" (.Values.kick.channelSlug | default "") | indent 4 }}
+{{ .Files.Get "static/index.html" | indent 4 }}
 {{- end }}

@@ -7,7 +7,6 @@ image:
 kick:
   streamKey: ""          # REQUIRED
   rtmpUrl: ""            # REQUIRED
-  # channelSlug: ""      # optional — landing-page Kick embed (click-to-play, unmuted)
 
 hostPaths:
   music: /path/on/host/ws4000-music

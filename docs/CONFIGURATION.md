@@ -23,7 +23,6 @@ GPU details: [GPU.md](GPU.md)
 | `config.type` | `hostPath` | `hostPath`, `nfs`, or `pvc` |
 | `vlc.enabled` | `true` | VLC background playlist |
 | `vlc.playlist` | `/music/ws4000-all.xspf` | Playlist path |
-| `kick.channelSlug` | `""` | Kick channel for landing-page click-to-play embed (`autoplay=false`) |
 | `gpu.enabled` | `false` | Streamer VAAPI encode |
 | `gpu.ws4000Enabled` | `false` | Sim DXVK rendering |
 | `ingress.host` | `ws4000.example.com` | Ingress hostname |
