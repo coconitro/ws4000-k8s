@@ -4,6 +4,14 @@ set -euo pipefail
 
 export DISPLAY="${DISPLAY:-:99}"
 
+# shellcheck source=/dev/null
+. /usr/local/bin/ws4000-process.sh
+
+if ! ws4000_is_running; then
+  echo "ERROR: WS4000v4.exe not running; cannot soft-recover" >&2
+  exit 1
+fi
+
 WS4000_CLICK_DELAY="${WS4000_CLICK_DELAY:-5}"
 SIM_MENU_X="${WS4000_SIM_MENU_X:-96}"
 SIM_MENU_Y="${WS4000_SIM_MENU_Y:-29}"

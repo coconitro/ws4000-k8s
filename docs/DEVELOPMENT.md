@@ -32,6 +32,12 @@ kubectl exec deployment/ws4000-ws4000 -c streamer -- /usr/local/bin/verify-gpu-s
 kubectl exec deployment/ws4000-ws4000 -c ws4000 -- /usr/local/bin/verify-ws4000-render.sh
 ```
 
+## Tests
+
+```bash
+./build/test-ws4000-process.sh
+```
+
 ## Publish
 
 ```bash
