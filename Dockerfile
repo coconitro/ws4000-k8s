@@ -56,7 +56,7 @@ RUN curl -fL https://raw.githubusercontent.com/Winetricks/winetricks/master/src/
       -o /usr/local/bin/winetricks && \
     chmod +x /usr/local/bin/winetricks && \
     winetricks --version && \
-    WINEPREFIX=/wineprefix WINEARCH=win64 winetricks -q dxvk && \
+    WINEPREFIX=/wineprefix WINEARCH=win64 winetricks -q dxvk2071 && \
     touch /wineprefix/.dxvk-ready && \
     for dll in d3d8 d3d9 d3d11 dxgi; do \
       WINEPREFIX=/wineprefix WINEARCH=win64 /opt/wine-ge/bin/wine64 reg add \
