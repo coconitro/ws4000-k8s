@@ -188,6 +188,40 @@
       font-size: 1.1rem;
     }
 
+    .kick-player {
+      display: none;
+      margin-top: 1.25rem;
+    }
+
+    .kick-player.is-visible {
+      display: block;
+    }
+
+    .kick-player .kick-label {
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ws-dim);
+      margin-bottom: 0.55rem;
+    }
+
+    .kick-player .kick-frame {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%;
+      border: 1px solid #3a5a8a;
+      background: #050d1f;
+      overflow: hidden;
+    }
+
+    .kick-player iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+
     .footer {
       margin-top: 1.25rem;
       padding-top: 0.85rem;
@@ -276,6 +310,23 @@
         </ul>
       </nav>
 
+      <section
+        id="kick-player"
+        class="kick-player"
+        data-kick-channel="__KICK_CHANNEL_SLUG__"
+        aria-label="Kick livestream"
+      >
+        <div class="kick-label">Livestream — click play for sound</div>
+        <div class="kick-frame">
+          <iframe
+            id="kick-embed"
+            title="Kick livestream"
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+            allowfullscreen
+          ></iframe>
+        </div>
+      </section>
+
       <div class="ticker" aria-hidden="true">
         <span>
           LOCAL ON THE 8'S &#8226; YOUR FORECAST ON THE WEATHER STAR 4000 &#8226; SIMULATION MODE ACTIVE
@@ -287,5 +338,21 @@
       </footer>
     </div>
   </main>
+  <script>
+    (function () {
+      var section = document.getElementById("kick-player");
+      if (!section) return;
+      var channel = (section.getAttribute("data-kick-channel") || "").trim();
+      if (!channel || channel.indexOf("__KICK_") === 0) return;
+      var frame = document.getElementById("kick-embed");
+      // autoplay=false so browsers start unmuted on the viewer's play click
+      // (muted autoplay is what leaves friends stuck without sound).
+      frame.src =
+        "https://player.kick.com/" +
+        encodeURIComponent(channel) +
+        "?autoplay=false&muted=false";
+      section.classList.add("is-visible");
+    })();
+  </script>
 </body>
 </html>

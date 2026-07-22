@@ -80,11 +80,12 @@ COPY --chown=wineuser:wineuser container/entrypoint/verify-ws4000-render.sh /usr
 COPY container/entrypoint/healthcheck.sh /usr/local/bin/healthcheck.sh
 COPY container/entrypoint/check-ws4000-alive.sh /usr/local/bin/check-ws4000-alive.sh
 COPY container/entrypoint/recover-ws4000-sim.sh /usr/local/bin/recover-ws4000-sim.sh
+COPY container/entrypoint/ws4000-process.sh /usr/local/bin/ws4000-process.sh
 # Cache-bust when WS4000 bundle contents change (profile.dat, Config.w4k, etc.)
 ARG WS4000_BUST=1
 USER root
 RUN echo "WS4000 bundle bust=${WS4000_BUST}" && \
-    chmod +x /entrypoint.sh /start.sh /usr/local/bin/stream.sh /usr/local/bin/verify-gpu-stream.sh /usr/local/bin/verify-ws4000-render.sh /usr/local/bin/healthcheck.sh /usr/local/bin/check-ws4000-alive.sh /usr/local/bin/recover-ws4000-sim.sh && \
+    chmod +x /entrypoint.sh /start.sh /usr/local/bin/stream.sh /usr/local/bin/verify-gpu-stream.sh /usr/local/bin/verify-ws4000-render.sh /usr/local/bin/healthcheck.sh /usr/local/bin/check-ws4000-alive.sh /usr/local/bin/recover-ws4000-sim.sh /usr/local/bin/ws4000-process.sh && \
     ln -sfn /app/WS4000v4 /wineprefix/drive_c/WS4000v4_win && \
     cd /app/WS4000v4 && \
     if [ ! -f Config.w4k ] && [ -f config.w4k ]; then cp config.w4k Config.w4k; fi && \

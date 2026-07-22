@@ -58,6 +58,9 @@ vlc:
 kick:
   streamKey: ""
   rtmpUrl: ""
+  # Optional Kick channel slug. When set, the control-panel landing page embeds
+  # the Kick player with autoplay disabled so click-to-play starts with sound.
+  channelSlug: ""
 
 stream:
   resolution: "800x600"

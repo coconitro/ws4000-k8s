@@ -88,9 +88,13 @@ This adds a pod sidecar that answers `/tm.php` locally and reverse-proxies other
 
 | URL | Purpose |
 |-----|---------|
-| `http://<ingress.host>/` | Landing page |
+| `http://<ingress.host>/` | Landing page (optional Kick click-to-play embed via `kick.channelSlug`) |
 | `http://<ingress.host>/vnc.html` | Simulation console |
 | `http://<ingress.host>/export/profile.dat` | Profile download |
+
+Set `kick.channelSlug` to your Kick username to embed the player with
+`autoplay=false` (click play → unmuted). Kick.com itself still autoplays muted
+in the browser; send friends the control-panel link if they keep watching silent.
 
 ## Upgrade
 

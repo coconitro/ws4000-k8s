@@ -29,20 +29,40 @@ if [ -f "/tmp/Xorg.${DISPLAY_NUM}.log" ]; then
   echo "=== Xorg log (last 15 lines) ==="
   tail -15 "/tmp/Xorg.${DISPLAY_NUM}.log" 2>/dev/null || true
 fi
-# Solid black root unless a background image is configured.
+# Brand-colored root unless a background image is configured.
+# Pure black reads as "stream is dead" on Kick; navy matches the control panel.
+# shellcheck source=/dev/null
+. /usr/local/bin/ws4000-process.sh
+
+X11_FALLBACK_COLOR="${X11_FALLBACK_COLOR:-#0b1a3a}"
 if { [ -z "${X11_BACKGROUND:-}" ] || [ ! -f "$X11_BACKGROUND" ]; } && [ -f /app/WS4000v4/ws4000-background.jpg ]; then
   X11_BACKGROUND=/app/WS4000v4/ws4000-background.jpg
 fi
 set_x11_background() {
+  local teardown="${1:-0}"
+  if [ "$teardown" = "1" ]; then
+    # Wine explorer /desktop covers the X11 root; tear it down so wallpaper shows.
+    ws4000_teardown_wine_desktop
+  fi
+
   if [ -n "${X11_BACKGROUND:-}" ] && [ -f "$X11_BACKGROUND" ]; then
     echo "Setting X11 background: $X11_BACKGROUND"
     pkill -x feh 2>/dev/null || true
-    feh --bg-fill "$X11_BACKGROUND" >/tmp/feh.log 2>&1 || {
-      echo "WARNING: feh failed; falling back to black"
-      xsetroot -solid black 2>/dev/null || true
-    }
+    # --no-fehbg avoids writing ~/.fehbg; keep feh as a window manager-less fill.
+    if ! feh --no-fehbg --bg-fill "$X11_BACKGROUND" >/tmp/feh.log 2>&1; then
+      echo "WARNING: feh --bg-fill failed; trying fullscreen window" >&2
+      cat /tmp/feh.log 2>/dev/null || true
+      feh --no-fehbg -F -x --zoom fill "$X11_BACKGROUND" >/tmp/feh.log 2>&1 &
+      sleep 1
+      if ! pgrep -x feh >/dev/null 2>&1; then
+        echo "WARNING: feh failed; falling back to ${X11_FALLBACK_COLOR}" >&2
+        cat /tmp/feh.log 2>/dev/null || true
+        xsetroot -solid "$X11_FALLBACK_COLOR" 2>/dev/null || xsetroot -solid black 2>/dev/null || true
+      fi
+    fi
   else
-    xsetroot -solid black 2>/dev/null || true
+    echo "No X11 background image; using solid ${X11_FALLBACK_COLOR}"
+    xsetroot -solid "$X11_FALLBACK_COLOR" 2>/dev/null || xsetroot -solid black 2>/dev/null || true
   fi
 }
 set_x11_background
@@ -229,8 +249,10 @@ else
 fi
 
 # Keep the container alive only while WS4000 is running and the display is updating.
-# When the sim exits or freezes, exit non-zero so kubelet restarts the pod.
+# When the sim exits or freezes, show wallpaper (after tearing down Wine's virtual
+# desktop), then exit non-zero so kubelet restarts the pod.
 WATCH_INTERVAL="${WS4000_WATCH_INTERVAL:-30}"
+BACKGROUND_HOLD_SECONDS="${WS4000_BACKGROUND_HOLD_SECONDS:-8}"
 echo "Watching WS4000v4.exe (interval ${WATCH_INTERVAL}s, freeze detection enabled=${WS4000_FREEZE_DETECTION_ENABLED:-1})"
 while true; do
   check_result=0
@@ -238,15 +260,18 @@ while true; do
 
   if [ "$check_result" -eq 1 ]; then
     echo "ERROR: WS4000v4.exe exited" >&2
-    set_x11_background
+    set_x11_background 1
     tail -30 /tmp/wine.log 2>/dev/null || true
+    # Hold briefly so Kick viewers see the wallpaper instead of a one-frame flash.
+    sleep "$BACKGROUND_HOLD_SECONDS"
     exit 1
   fi
 
   if [ "$check_result" -eq 2 ]; then
     echo "ERROR: WS4000 display frozen after soft recovery" >&2
     tail -30 /tmp/wine.log 2>/dev/null || true
-    set_x11_background
+    set_x11_background 1
+    sleep "$BACKGROUND_HOLD_SECONDS"
     exit 1
   fi
 

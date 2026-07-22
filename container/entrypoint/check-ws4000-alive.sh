@@ -9,6 +9,9 @@ set -euo pipefail
 
 export DISPLAY="${DISPLAY:-:99}"
 
+# shellcheck source=/dev/null
+. /usr/local/bin/ws4000-process.sh
+
 FREEZE_ENABLED="${WS4000_FREEZE_DETECTION_ENABLED:-1}"
 STALE_THRESHOLD="${WS4000_FREEZE_STALE_THRESHOLD_SECONDS:-300}"
 GRACE_PERIOD="${WS4000_FREEZE_GRACE_PERIOD_SECONDS:-120}"
@@ -22,7 +25,7 @@ SIM_STARTED_FILE="${STATE_DIR}/sim-started-at"
 
 mkdir -p "$STATE_DIR"
 
-if ! pgrep -f 'WS4000v4\.exe' >/dev/null 2>&1; then
+if ! ws4000_is_running; then
   echo "WS4000v4.exe not running" >&2
   exit 1
 fi
