@@ -9,6 +9,9 @@ set -euo pipefail
 
 export DISPLAY="${DISPLAY:-:99}"
 
+# shellcheck source=/dev/null
+. /usr/local/bin/ws4000-process.sh
+
 FREEZE_ENABLED="${WS4000_FREEZE_DETECTION_ENABLED:-1}"
 STALE_THRESHOLD="${WS4000_FREEZE_STALE_THRESHOLD_SECONDS:-300}"
 GRACE_PERIOD="${WS4000_FREEZE_GRACE_PERIOD_SECONDS:-120}"
@@ -19,10 +22,13 @@ STATE_DIR="${WS4000_STATE_DIR:-/tmp/ws4000-state}"
 HASH_FILE="${STATE_DIR}/frame-hash"
 STALE_SINCE_FILE="${STATE_DIR}/stale-since"
 SIM_STARTED_FILE="${STATE_DIR}/sim-started-at"
+SOFT_RECOVERY_FILE="${STATE_DIR}/soft-recovery-attempted"
 
 mkdir -p "$STATE_DIR"
 
-if ! pgrep -f 'WS4000v4\.exe' >/dev/null 2>&1; then
+# Match the real sim PID only — Wine's explorer /desktop=... parent keeps
+# "WS4000v4.exe" in its cmdline after the sim dies (black desktop + music).
+if ! ws4000_is_running; then
   echo "WS4000v4.exe not running" >&2
   exit 1
 fi
@@ -88,7 +94,8 @@ fi
 previous_hash="$(cat "$HASH_FILE")"
 if [ "$current_hash" != "$previous_hash" ]; then
   echo "$current_hash" >"$HASH_FILE"
-  rm -f "$STALE_SINCE_FILE" 2>/dev/null || true
+  # Display recovered — allow soft recovery again on a future freeze.
+  rm -f "$STALE_SINCE_FILE" "$SOFT_RECOVERY_FILE" 2>/dev/null || true
   exit 0
 fi
 
@@ -100,10 +107,10 @@ fi
 stale_since="$(cat "$STALE_SINCE_FILE")"
 stale_seconds=$((now - stale_since))
 if [ "$stale_seconds" -ge "$STALE_THRESHOLD" ]; then
-  if [ "${WS4000_FREEZE_SOFT_RECOVERY_ENABLED:-1}" = "1" ] && [ ! -f "${STATE_DIR}/soft-recovery-attempted" ]; then
+  if [ "${WS4000_FREEZE_SOFT_RECOVERY_ENABLED:-1}" = "1" ] && [ ! -f "$SOFT_RECOVERY_FILE" ]; then
     echo "WS4000 display frozen for ${stale_seconds}s; attempting soft recovery" >&2
     if /usr/local/bin/recover-ws4000-sim.sh; then
-      touch "${STATE_DIR}/soft-recovery-attempted"
+      touch "$SOFT_RECOVERY_FILE"
       exit 0
     fi
     echo "WARNING: soft recovery failed" >&2
