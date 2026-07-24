@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Darrington Weather TV</title>
+  <meta name="description" content="Live 90s-style local forecast for Darrington — tap Play with sound to watch.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #071428;
+      --deep: #0b1a3a;
+      --bar: #1e3a6e;
+      --cyan: #5ec8e8;
+      --gold: #f0c040;
+      --amber: #e8a020;
+      --white: #eef3fb;
+      --dim: #9bb0d0;
+      --danger: #ff5a5a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--navy);
+      color: var(--white);
+      font-family: "IBM Plex Sans", sans-serif;
+    }
+
+    body {
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stage {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      background:
+        radial-gradient(ellipse 90% 70% at 50% 35%, #163a6a 0%, var(--deep) 48%, #040a16 100%);
+    }
+
+    .stage::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(94, 200, 232, 0.035) 2px,
+        rgba(94, 200, 232, 0.035) 4px
+      );
+      pointer-events: none;
+      z-index: 2;
+      animation: scan-drift 8s linear infinite;
+    }
+
+    .stage::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.55) 100%);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    @keyframes scan-drift {
+      from { background-position: 0 0; }
+      to { background-position: 0 8px; }
+    }
+
+    #player {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+      background: #000;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 0.35s ease;
+    }
+
+    #player.is-live {
+      opacity: 1;
+    }
+
+    .gate {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(1.25rem, 4vw, 2.5rem);
+      text-align: center;
+      background:
+        linear-gradient(180deg, rgba(7, 20, 40, 0.55) 0%, rgba(7, 20, 40, 0.82) 100%);
+      transition: opacity 0.35s ease, visibility 0.35s ease;
+    }
+
+    .gate.is-gone {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .brand {
+      font-family: "Bebas Neue", sans-serif;
+      font-size: clamp(2.75rem, 10vw, 6.5rem);
+      line-height: 0.92;
+      letter-spacing: 0.04em;
+      color: var(--gold);
+      text-shadow:
+        0 2px 0 #000,
+        0 0 40px rgba(240, 192, 64, 0.25);
+      max-width: 12ch;
+      animation: brand-in 0.7s ease-out both;
+    }
+
+    .tagline {
+      margin-top: 0.85rem;
+      max-width: 28rem;
+      font-size: clamp(0.95rem, 2.4vw, 1.15rem);
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      animation: brand-in 0.7s ease-out 0.08s both;
+    }
+
+    .hint {
+      margin-top: 0.55rem;
+      font-size: 0.95rem;
+      color: var(--dim);
+      animation: brand-in 0.7s ease-out 0.14s both;
+    }
+
+    @keyframes brand-in {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .play {
+      margin-top: clamp(1.5rem, 4vw, 2.25rem);
+      appearance: none;
+      border: 0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.85rem;
+      min-width: min(92vw, 28rem);
+      padding: 1.15rem 1.75rem;
+      border-radius: 4px;
+      background: linear-gradient(180deg, var(--gold) 0%, var(--amber) 100%);
+      color: #1a1200;
+      font-family: "Bebas Neue", sans-serif;
+      font-size: clamp(1.85rem, 5.5vw, 2.75rem);
+      letter-spacing: 0.08em;
+      box-shadow:
+        0 0 0 3px rgba(240, 192, 64, 0.25),
+        0 12px 40px rgba(0, 0, 0, 0.45),
+        0 0 60px rgba(240, 192, 64, 0.2);
+      animation: pulse 1.8s ease-in-out infinite, brand-in 0.7s ease-out 0.2s both;
+      transition: transform 0.12s ease, filter 0.12s ease;
+    }
+
+    .play:hover,
+    .play:focus-visible {
+      transform: scale(1.03);
+      filter: brightness(1.06);
+      outline: none;
+    }
+
+    .play:active {
+      transform: scale(0.98);
+    }
+
+    .play .icon {
+      width: 1.15em;
+      height: 1.15em;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.18);
+      font-size: 0.72em;
+      line-height: 1;
+      padding-left: 0.08em;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 3px rgba(240, 192, 64, 0.25), 0 12px 40px rgba(0, 0, 0, 0.45), 0 0 40px rgba(240, 192, 64, 0.18); }
+      50% { box-shadow: 0 0 0 8px rgba(240, 192, 64, 0.12), 0 14px 48px rgba(0, 0, 0, 0.5), 0 0 70px rgba(240, 192, 64, 0.35); }
+    }
+
+    .subcta {
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      color: var(--dim);
+      animation: brand-in 0.7s ease-out 0.28s both;
+    }
+
+    .live-bar {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 6;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.65rem 1rem;
+      background: linear-gradient(180deg, #142850 0%, #0c1e40 100%);
+      border-top: 3px solid #fff;
+      color: var(--gold);
+      font-size: 0.85rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .live-bar .status {
+      color: var(--cyan);
+      font-weight: 700;
+    }
+
+    .live-bar .status[data-state="waiting"] {
+      color: var(--gold);
+    }
+
+    .unmute {
+      appearance: none;
+      border: 1px solid var(--cyan);
+      background: rgba(94, 200, 232, 0.12);
+      color: var(--white);
+      font-family: "IBM Plex Sans", sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 0.45rem 0.75rem;
+      cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(6px);
+      transition: opacity 0.25s ease, transform 0.25s ease, background 0.15s ease;
+    }
+
+    .unmute.is-shown {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+      animation: unmute-pulse 1.6s ease-in-out infinite;
+    }
+
+    .unmute:hover,
+    .unmute:focus-visible {
+      background: rgba(94, 200, 232, 0.22);
+      outline: none;
+    }
+
+    @keyframes unmute-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(94, 200, 232, 0.35); }
+      50% { box-shadow: 0 0 0 6px rgba(94, 200, 232, 0); }
+    }
+
+    .toast {
+      position: absolute;
+      top: 1rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(-8px);
+      z-index: 7;
+      max-width: min(92vw, 26rem);
+      padding: 0.75rem 1rem;
+      background: rgba(10, 20, 40, 0.92);
+      border: 1px solid var(--cyan);
+      color: var(--white);
+      font-size: 0.9rem;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .toast.is-shown {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .stage::before,
+      .play,
+      .unmute,
+      .brand,
+      .tagline,
+      .hint,
+      .subcta {
+        animation: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="stage" id="stage">
+    <!-- Kick iframe is injected only after a user gesture so unmuted autoplay can succeed. -->
+    <iframe
+      id="player"
+      title="Darrington Weather TV live stream"
+      allowfullscreen
+      allow="autoplay; encrypted-media; picture-in-picture; fullscreen; accelerometer; gyroscope"
+      referrerpolicy="strict-origin-when-cross-origin"
+    ></iframe>
+
+    <div class="gate" id="gate" role="dialog" aria-modal="true" aria-labelledby="brand" aria-describedby="tagline">
+      <h1 class="brand" id="brand">Darrington Weather TV</h1>
+      <p class="tagline" id="tagline">90s-style local forecast — live on Kick</p>
+      <p class="hint">Browsers block sound until you press play.</p>
+      <button type="button" class="play" id="playBtn" autofocus>
+        <span class="icon" aria-hidden="true">&#9654;</span>
+        <span>Play with sound</span>
+      </button>
+      <p class="subcta">One tap starts the stream unmuted</p>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <footer class="live-bar">
+      <div>
+        <span class="status" id="status" data-state="waiting">Waiting to start</span>
+        <span aria-hidden="true"> · </span>
+        <span>Darrington Weather TV</span>
+      </div>
+      <button type="button" class="unmute" id="unmuteBtn" hidden>
+        Still quiet? Unmute
+      </button>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      var CHANNEL = "darringtonweathertv";
+      // Load only after click. muted=false + autoplay=true needs a user gesture.
+      var PLAYER_URL =
+        "https://player.kick.com/" + CHANNEL + "?autoplay=true&muted=false";
+      var FALLBACK_URL =
+        "https://player.kick.com/" + CHANNEL + "?autoplay=false&muted=false";
+
+      var gate = document.getElementById("gate");
+      var playBtn = document.getElementById("playBtn");
+      var unmuteBtn = document.getElementById("unmuteBtn");
+      var player = document.getElementById("player");
+      var statusEl = document.getElementById("status");
+      var toast = document.getElementById("toast");
+      var started = false;
+      var unmuteTimer = null;
+
+      function setStatus(text, state) {
+        statusEl.textContent = text;
+        statusEl.dataset.state = state || "live";
+      }
+
+      function showToast(message, ms) {
+        toast.textContent = message;
+        toast.classList.add("is-shown");
+        window.clearTimeout(showToast._t);
+        showToast._t = window.setTimeout(function () {
+          toast.classList.remove("is-shown");
+        }, ms || 4500);
+      }
+
+      function revealUnmuteHelp() {
+        unmuteBtn.hidden = false;
+        // Force reflow so the transition runs after un-hiding.
+        void unmuteBtn.offsetWidth;
+        unmuteBtn.classList.add("is-shown");
+        showToast("If it’s silent, tap Still quiet? Unmute — Kick may need one more click.", 6000);
+      }
+
+      function startStream() {
+        if (started) return;
+        started = true;
+
+        player.src = PLAYER_URL;
+        player.classList.add("is-live");
+        gate.classList.add("is-gone");
+        setStatus("Live", "live");
+        playBtn.setAttribute("aria-busy", "true");
+
+        // Kick/browser may still start muted inside the cross-origin player.
+        // Surface a loud secondary unmute action after a short beat.
+        unmuteTimer = window.setTimeout(revealUnmuteHelp, 2500);
+      }
+
+      function forceUnmutePath() {
+        // Reload with click-to-play so Kick’s own play control owns the gesture.
+        player.src = FALLBACK_URL;
+        player.classList.add("is-live");
+        setStatus("Tap play in the player", "waiting");
+        showToast("Tap the Kick play button once — sound should come on with it.", 7000);
+        try {
+          player.focus();
+        } catch (e) {}
+      }
+
+      playBtn.addEventListener("click", startStream);
+      // Whole gate is clickable for fat-finger mobile UX.
+      gate.addEventListener("click", function (event) {
+        if (event.target === playBtn || playBtn.contains(event.target)) return;
+        startStream();
+      });
+      gate.addEventListener("keydown", function (event) {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          startStream();
+        }
+      });
+
+      unmuteBtn.addEventListener("click", forceUnmutePath);
+    })();
+  </script>
+</body>
+</html>
