@@ -92,6 +92,11 @@ This adds a pod sidecar that answers `/tm.php` locally and reverse-proxies other
 | `http://<ingress.host>/vnc.html` | Simulation console |
 | `http://<ingress.host>/export/profile.dat` | Profile download |
 
+Kick.com autoplays muted. To share a click-to-play link with sound (no auth),
+send friends the public player URL:
+
+`https://player.kick.com/<your-channel>?autoplay=false&muted=false`
+
 ## Upgrade
 
 ```bash

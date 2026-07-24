@@ -42,7 +42,13 @@ fi
 
 echo ""
 echo "=== OpenGL driver ==="
-PID=$(pgrep -f "WS4000v4.exe" | head -1 || true)
+# shellcheck source=/dev/null
+if [ -f /usr/local/bin/ws4000-process.sh ]; then
+  . /usr/local/bin/ws4000-process.sh
+  PID=$(ws4000_sim_pids | head -1 || true)
+else
+  PID=$(pgrep -af 'WS4000v4\.exe' 2>/dev/null | grep -v explorer | grep -v grep | awk '{print $1}' | head -1 || true)
+fi
 if [ -n "$PID" ] && [ -r "/proc/$PID/maps" ]; then
   if grep -qE 'radeon|amdgpu' /proc/$PID/maps 2>/dev/null && ! grep -q swrast /proc/$PID/maps 2>/dev/null; then
     echo "OK: AMD GPU DRI loaded in WS4000 process"
